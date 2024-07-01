@@ -31,7 +31,7 @@ func (u UploadedData) UploadData() (*s3manager.UploadOutput, error) {
 func InitPartUploader(sess *session.Session) *s3manager.Uploader {
 
 	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
-		u.PartSize = 2 * 1024 * 1024 // 2 mb
+		u.PartSize = 5 * 1024 * 1024 // 2 mb
 		u.Concurrency = 4
 		u.LeavePartsOnError = true
 	})
