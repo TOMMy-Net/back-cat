@@ -1,87 +1,55 @@
 package internal
 
 import (
+	"context"
 	"errors"
-	"os"
-
-	"path/filepath"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"log"
+	"sync"
 )
 
 var (
 	ErrNoRow = errors.New("no row in struct")
 )
 
-type S3 struct {
-	Url    string
-	Access string
-	Secret string
-	Bucket string
-	Region string
-	Path   string
+type BackUp struct {
+	Services []Services
 }
 
-type BackUp struct {
-	Path    string
-	S3      S3
-	Archive bool
-	Name    string
+type Config struct {
+	ctx context.Context
+	wg  *sync.WaitGroup
+}
+
+type Services interface {
+	GetSettings() Settings
+	Run(*Config) error
 }
 
 func (b *BackUp) BackUpFiles() error {
+	config := NewConfig()
+	for i := 0; i < len(b.Services); i++ {
+		config.wg.Add(1)
+		go func(s Services, wg *sync.WaitGroup) {
+			err := s.Run(config) // launching backup one of the protocol services
+			if err != nil {
+				log.Println(err)
+			}
+			wg.Done()
 
-	fileStat, err := os.Stat(filepath.Join(b.Path))
-	if err != nil {
-		return err
+		}(b.Services[i], config.wg)
 	}
 
-	sess := AWSsession(&b.S3)
-	uploader := InitPartUploader(sess)
-
-	file, err := os.Open(filepath.Join(b.Path))
-	if err != nil {
-		return err
-	}
-
-	if fileStat.IsDir() {
-
-	} else {
-
-		UD := UploadedData{
-			Data:     file,
-			Bucket:   b.S3.Bucket,
-			Key:      filepath.ToSlash(filepath.Join(b.S3.Path, fileStat.Name())),
-			Uploader: uploader,
-		}
-		_, err = UD.UploadData()
-		if err != nil {
-			return err
-		}
-
-	}
-
+	config.wg.Wait()
 	return nil
 }
 
-func AWSsession(s3 *S3) *session.Session {
-	var awsConfig *aws.Config
-	if s3.Access == "" || s3.Secret == "" {
-		//load default credentials
-		awsConfig = &aws.Config{
-			Endpoint: &s3.Url,
-			Region:   &s3.Region,
-		}
-	} else {
-		awsConfig = &aws.Config{
-			Endpoint:    &s3.Url,
-			Region:      &s3.Region,
-			Credentials: credentials.NewStaticCredentials(s3.Access, s3.Secret, ""),
-		}
-	}
+func NewBackup() *BackUp {
+	return new(BackUp)
+}
 
-	sess := session.Must(session.NewSession(awsConfig))
-	return sess
+func NewConfig() *Config {
+	c := new(Config)
+	c.ctx = context.Background()
+	c.wg = new(sync.WaitGroup)
+	return c
 }
