@@ -9,11 +9,11 @@ import (
 
 type Service struct {
 	S3   S3   `yaml:"s3"`
-	SFTP SFTP `yaml:"sftp"`
+	//SFTP SFTP `yaml:"sftp"`
 }
 
 type BCat struct {
-	Services Service `yaml:"services"`
+	Services map[string]Service `yaml:"services"`
 }
 
 func ReadCat() BCat {
