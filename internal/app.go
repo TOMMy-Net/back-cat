@@ -8,7 +8,7 @@ import (
 )
 
 type Service struct {
-	S3   S3   `yaml:"s3"`
+	S3 *S3 `yaml:"s3"`
 	//SFTP SFTP `yaml:"sftp"`
 }
 

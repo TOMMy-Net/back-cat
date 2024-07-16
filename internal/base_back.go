@@ -21,6 +21,7 @@ type Config struct {
 }
 
 type Services interface {
+	UpdateSettings(Settings)
 	GetSettings() Settings
 	Run(*Config) error
 }

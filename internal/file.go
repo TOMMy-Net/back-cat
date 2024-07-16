@@ -10,17 +10,16 @@ import (
 )
 
 type Uploader interface {
-	UploadData(context.Context) error
+	UploadData(context.Context, io.Reader) error
 	SetPath(...string)
 	GetPath() string
-	SetData(io.Reader)
 }
 
 type Settings struct {
 	Time    string `yaml:"time"`
 	Archive bool   `yaml:"archive"`
 	Path    string `yaml:"path" validate:"required"`
-	Name    string `yaml:"name"`
+	Name    string `yaml:"-"`
 }
 
 func (s Settings) WalkandUpload(uploader Uploader, c *Config) error {
@@ -33,13 +32,12 @@ func (s Settings) WalkandUpload(uploader Uploader, c *Config) error {
 		if !info.IsDir() {
 			file, err := os.Open(path)
 			if err != nil {
-				log.Printf("%s : %s", path, err)
+				log.Printf("%s ~ %s : %s", s.Name, path, err)
 				return nil
 			}
 			defer file.Close()
-			uploader.SetData(file)
 			uploader.SetPath(path)
-			err = uploader.UploadData(c.ctx)
+			err = uploader.UploadData(c.ctx, file)
 			if err != nil {
 				log.Printf("%s ~ %s : err uploading (%s)", s.Name, path, err)
 			} else {

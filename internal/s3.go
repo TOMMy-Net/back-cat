@@ -24,18 +24,19 @@ type S3 struct {
 }
 
 type S3UploadedData struct {
-	Data     io.Reader
+	//Data     io.Reader
+	BaseDir  string
 	Bucket   string
 	Key      string
 	Uploader *s3manager.Uploader
 }
 
-func (u *S3UploadedData) UploadData(ctx context.Context) error {
+func (u *S3UploadedData) UploadData(ctx context.Context, data io.Reader) error {
 
 	_, err := u.Uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket: aws.String(u.Bucket),
 		Key:    aws.String(u.Key),
-		Body:   u.Data,
+		Body:   data,
 	})
 
 	if err != nil {
@@ -76,19 +77,19 @@ func (s3 S3) GetUploader() (*S3UploadedData, error) {
 	if err != nil {
 		return &S3UploadedData{}, err
 	}
-	up := InitS3PartUploader(sess)
+	up := initS3PartUploader(sess)
 	data := NewS3UploadedData()
 	data.Uploader = up
 	data.Bucket = s3.Bucket
 	return data, nil
 }
 
-func (s3 S3) GetSettings() Settings {
+func (s3 *S3) GetSettings() Settings {
 	return s3.Settings
 }
 
-func (u *S3UploadedData) SetData(data io.Reader) {
-	u.Data = data
+func (s3 *S3) UpdateSettings(s Settings)  {
+	s3.Settings = s
 }
 
 func (u *S3UploadedData) SetPath(path ...string) {
@@ -99,7 +100,7 @@ func (u *S3UploadedData) GetPath() string {
 	return u.Key
 }
 
-func InitS3PartUploader(sess *session.Session) *s3manager.Uploader {
+func initS3PartUploader(sess *session.Session) *s3manager.Uploader {
 
 	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
 		u.PartSize = 5 * 1024 * 1024 // 5 mb
@@ -110,7 +111,7 @@ func InitS3PartUploader(sess *session.Session) *s3manager.Uploader {
 	return uploader
 }
 
-func (s S3) Run(c *Config) error {
+func (s *S3) Run(c *Config) error {
 	if err := validate(s); err != nil {
 		return err
 	} else {
